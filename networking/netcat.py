@@ -11,7 +11,7 @@ import threading
 def execute(cmd):
   cmd = cmd.strip()
   if not cmd:
-    return
+    return 
   
   if os.name == "nt":
     shell = True
@@ -100,7 +100,7 @@ class NetCat:
       cmd_buffer = b''
       while True:
         try:
-          client_socket.send(b'<BHP:#>')
+          client_socket.send(b'<BHP:#> ')
           while '\n' not in cmd_buffer.decode():
             cmd_buffer += client_socket.recv(64)
           response = execute(cmd_buffer.decode())
@@ -152,10 +152,11 @@ if __name__ == '__main__':
   parser.add_argument('-e', '--execute', help='指定コマンドの実行')
   parser.add_argument('-l', '--listen', action='store_true', help='通信待受モード')
   parser.add_argument('-p', '--port', type=int, default=5555, help='PORT番号の指定')
-  parser.add_argument('-t', '--taarget', default='192.168.1.203', help='IPアドレス指定')
+  parser.add_argument('-t', '--target', default='192.168.1.203', help='IPアドレス指定')
   parser.add_argument('-u', '--upload', help='ファイルのアップロード')
   
   args = parser.parse_args()
+  print(args)
   if args.listen:
     buffer = ''
   else:
