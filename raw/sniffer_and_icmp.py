@@ -28,6 +28,15 @@ class IP:
         except Exception as e:
           print('%s No Protocol for %s' %(e, self.protocol_num))
           
+class ICMP:
+    def __init__(self, buff):
+        header = struct.unpack('<BBHHH', buff)
+        self.type = header[0]
+        self.code = header[1]
+        self.sum = header[2]
+        self.id = header[3]
+        self.seq = header[4]
+          
           
 def sniffer(host):
     if os.name == 'nt':
@@ -47,7 +56,20 @@ def sniffer(host):
         while True:
             raw_buffer = sniffer.recvfrom(65535)[0]
             ip_header = IP(raw_buffer[0:20])
-            print('Protocol" %s %s -> %s' %(ip_header.protocol, ip_header.src_address, ip_header.dst_address))
+            
+            if ip_header.protocol == 'ICMP':
+                print('Protocol" %s %s -> %s' %(ip_header.protocol, ip_header.src_address, ip_header.dst_address))
+                print(f'Version: {ip_header.ver}')
+                print(f'Header Length: {ip_header.ihl} \
+                      TTL: {ip_header.ttl}')
+                #ICMP位置計算
+                offset = ip_header.ihl * 4
+                buf = raw_buffer[offset:offset+8]
+                #ICMP構造体の作成
+                icmp_header = ICMP(buf)
+                print('ICMP -> Type %s Code: %s \n' %(icmp_header.type, icmp_header.code))
+            else:            
+                print('Protocol" %s %s -> %s' %(ip_header.protocol, ip_header.src_address, ip_header.dst_address))
             
     except KeyboardInterrupt:
         if os.name == 'nt':
