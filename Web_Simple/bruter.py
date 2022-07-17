@@ -3,8 +3,6 @@ import requests
 import sys
 import threading
 
-from sympy import arg
-
 AGENT = "Mozilla/5.0 (X11; Linux x86_64; rv:19.0) Gecko/20100101 Firefox/19.0"
 EXTENSIONS = ['.php', '.bak', '.orig', '.inc']
 TARGET = "http://testphp.vulnweb.com"
