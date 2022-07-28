@@ -62,6 +62,14 @@ def get_opendir_parent(url):
         else:
             return url_previos
     return url_previos
+
+def get_child_links(web_soup):
+    links_tmp = [url.get('href') for url in web_soup.find_all('a')]
+    links = []
+    for link in links_tmp:
+        if not re.search("^\?C=[A-Z];O=[A-Z]$", link) and not link=='/' and not link=='../':
+            links.append(link.replace('/',''))
+    return links
   
 def write_content(output_path, content):
     with open(output_path, content) as f:
@@ -90,3 +98,72 @@ def get_screenshot(url, output):
     except Exception as e:
         print(e)
         return -1
+      
+class GOD:
+    def get_opendir(self, url, output):
+        content_count = 0
+        if not url.startswith('http://') and not url.startswith('https://'):
+            print('Only http:// or https:// are acceptable.')
+            exit()
+        web_soup = get_web_content(url)
+        if web_soup != False:
+            if judge_opendir(web_soup):
+                opendir_parent = get_opendir_parent(url)
+                base_path = url.split('/')[2].replace(':', '_')
+                image_dir = os.path.join(output, f"{base_path}_image")
+                os.makedirs(image_dir, exist_ok=True)
+                opendir_urls = [opendir_parent]
+                imagepath_list = list()
+                for opendir_url in opendir_urls:
+                    print(f"Processing {opendir_url}...")
+                    web_soup = get_web_content(opendir_url)
+                    opendir_name = opendir_url.replace('http://','').replace('https://','').replace(':', '_')
+                    outputdir = os.path.join(output, opendir_name)
+                    os.makedirs(outputdir, exist_ok=True)
+                    links = get_child_links(web_soup)
+                    for link in links:
+                        if content_count > 10:
+                            break
+                        res = requests.get(f"{opendir_url}/{link}", headers=headers)
+                        time.sleep(5)
+                        link_filename = os.path.join(outputdir, link.replace('/',''))
+                        if res.status_code == 200:
+                            if 'content-type' in res.headers:
+                                if 'text/html' in res.headers['content-type']:
+                                    web_soup = get_web_content(f"{opendir_url}/{link}")
+                                    if web_soup != False:
+                                        if judge_opendir(web_soup):
+                                            opendir_urls.append(opendir_url + "/" + link ) # ❼
+                                        else:
+                                            write_content(link_filename, res.content)
+                                else:
+                                    write_content(link_filename, res.content)
+                            else:
+                                write_content(link_filename, res.content)
+                        content_count += 1
+                    imagepath = os.path.join(image_dir, opendir_url.replace('/','_').replace(':','').replace('.','_') +'.png')
+                    if get_screenshot(opendir_url, imagepath) > 0:
+                        print('Successfully got screenshot: ' + imagepath )
+                        imagepath_list.append(imagepath)
+                    else:
+                        print(f"Couldn't get screenshpt: {imagepath}")
+                if os.name == 'posix' and os.path.exists('/usr/bin/zip'):
+                    subprocess.call(['zip', '-r', '-e', '--password=novirus', f'{base_path}.zip', base_path], cwd=output)
+                elif os.name == 'nt' and os.path.exists('C:\\Windows\\System32\\wsl.exe') and subprocess.call(['wsl', 'which', 'zip'], stdout=subprocess.DEVNULL) == 0:
+                    subprocess.call(['wsl', 'zip', '-r', '-e', '--password=novirus', f'{base_path}.zip', base_path], cwd=output)
+                else:
+                    shutil.make_archive(os.path.join(output, base_path), 'zip', root_dir=os.path.join(output, base_path)) # without password
+                shutil.rmtree(os.path.join(output, base_path))
+                output_zip = os.path.join(output, f"{base_path}.zip")
+                print(f"Saved to {output_zip}" )
+                imagepath = os.path.join(output, f"{opendir_parent.replace('/','_').replace(':','').replace('.','_')}.png")
+                return [output_zip, imagepath_list]
+            else:
+                return ['This is not an OpenDir.']
+        else:
+            return ["Couldn't get html content from this URL."]
+
+if __name__ == '__main__':
+    god = GOD()
+    res = god.get_opendir(sys.argv[1], '<Your ourput directory>')
+    print(res)
