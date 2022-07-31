@@ -1,2 +1,5 @@
 /Opendir/.env
 /Opendir/chromedriver
+
+/IoCsns/.env
+/IoCsns/accountList.txt
